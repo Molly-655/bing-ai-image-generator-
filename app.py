@@ -73,6 +73,7 @@ def login_to_bing(driver, email, password):
     time.sleep(3)
 
     logging.info("📧 Entering email...")
+    WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.ID, "usernameEntry")))
     driver.find_element(By.ID, "usernameEntry").send_keys(email)
     driver.find_element(By.CSS_SELECTOR, "button[data-testid='primaryButton']").click()
     time.sleep(3)
