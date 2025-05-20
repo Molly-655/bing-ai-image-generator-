@@ -132,16 +132,12 @@ def save_base64_images(base64_list):
 
 @app.route("/api/gen", methods=["POST"])
 def generate():
-    global logged_in
-    email = os.getenv("email")
-    password = os.getenv("password")
     prompt = request.args.get("prompt")
 
-    if not all([email, password, prompt]):
-        return jsonify({"error": "Missing email, password, or prompt."}), 400
+    if not prompt:
+        return jsonify({"error": "Missing prompt."}), 400
 
     try:
-        login_once(email, password)  # login only once
         base64_images = generate_images(driver, prompt)
         saved = save_base64_images(base64_images)
         return jsonify(saved)
@@ -191,6 +187,22 @@ def get_binary_version(binary_path):
         return f"Could not determine version: {e}"
 
 if __name__ == '__main__':
-    print("Chromium version:", get_binary_version(chrome_bin))
-    print("Chromedriver version:", get_binary_version(chromedriver_bin))
+    email = os.getenv("email")
+    password = os.getenv("password")
+
+    if not email or not password:
+        print("❌ Missing email or password in .env file.")
+        exit(1)
+
+    print("🔍 Chromium version:", get_binary_version(chrome_bin))
+    print("🔍 Chromedriver version:", get_binary_version(chromedriver_bin))
+
+    try:
+        login_to_bing(driver, email, password)
+        logged_in = True
+        print("✅ Logged in to Bing successfully.")
+    except Exception as e:
+        print("❌ Login failed:", e)
+        exit(1)
+
     app.run(host='0.0.0.0', port=10000)
