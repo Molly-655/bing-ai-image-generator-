@@ -12,6 +12,10 @@ import logging
 import base64
 import uuid
 import traceback
+from dotenv import load_dotenv
+
+load_dotenv()
+
 
 # Setup logging
 logging.basicConfig(
@@ -28,8 +32,8 @@ os.makedirs(SCREENSHOT_DIR, exist_ok=True)
 
 ADMIN_CODE = "ICU14CU"
 
-chrome_bin = os.getenv("CHROME_BIN", "/usr/bin/chromium")
-chromedriver_bin = os.getenv("CHROMEDRIVER_BIN", "/usr/bin/chromedriver")
+chrome_bin = os.environ.get("CHROME_BIN", "/usr/bin/chromium")
+chromedriver_bin = os.environ.get("CHROMEDRIVER_BIN", "/usr/bin/chromedriver")
 
 user_agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36 Edg/136.0.0.0"
 
@@ -44,6 +48,13 @@ options.add_argument("--disable-software-rasterizer")
 
 service = Service(chromedriver_bin)
 driver = webdriver.Chrome(service=service, options=options)
+logged_in = False
+
+def login_once(email, password):
+    global logged_in
+    if not logged_in:
+        login_to_bing(driver, email, password)
+        logged_in = True
 
 def take_screenshot(driver, name):
     filepath = os.path.join(SCREENSHOT_DIR, f"{name}.png")
@@ -121,6 +132,7 @@ def save_base64_images(base64_list):
 
 @app.route("/api/gen", methods=["POST"])
 def generate():
+    global logged_in
     email = os.getenv("email")
     password = os.getenv("password")
     prompt = request.args.get("prompt")
@@ -129,7 +141,7 @@ def generate():
         return jsonify({"error": "Missing email, password, or prompt."}), 400
 
     try:
-        login_to_bing(driver, email, password)
+        login_once(email, password)  # login only once
         base64_images = generate_images(driver, prompt)
         saved = save_base64_images(base64_images)
         return jsonify(saved)
