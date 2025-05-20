@@ -62,14 +62,9 @@ def take_screenshot(driver, name):
     logging.info(f"📸 Screenshot saved: {filepath}")
 
 def login_to_bing(driver, email, password):
-    driver.get("https://www.bing.com/images/create")
-    logging.info("🔁 Navigating to Join & Create...")
-    take_screenshot(driver, "home")
-    create_btn = WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.ID, "create_btn_c")))
-    driver.execute_script("arguments[0].scrollIntoView({behavior: 'smooth', block: 'center'});", create_btn)
-    time.sleep(1)
-    create_btn.click()
-
+    driver.get("https://www.bing.com/fd/auth/signin?action=interactive&provider=windows_live_id&return_url=https%3a%2f%2fwww.bing.com%2fimages%2fcreate%3fsude%3d1&cobrandid=03f1ec5e-1843-43e5-a2f6-e60ab27f6b91&noaadredir=1&FORM=GENUS1")
+    time.sleep(3)
+    take_screenshot(driver, "login_page_loaded")
     time.sleep(3)
 
     logging.info("📧 Entering email...")
