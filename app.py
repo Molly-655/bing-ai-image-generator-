@@ -65,7 +65,11 @@ def login_to_bing(driver, email, password):
     driver.get("https://www.bing.com/images/create")
     logging.info("🔁 Navigating to Join & Create...")
     take_screenshot(driver, "home")
-    WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.ID, "create_btn_c"))).click()
+    create_btn = WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.ID, "create_btn_c")))
+    driver.execute_script("arguments[0].scrollIntoView({behavior: 'smooth', block: 'center'});", create_btn)
+    time.sleep(1)
+    create_btn.click()
+
     time.sleep(3)
 
     logging.info("📧 Entering email...")
