@@ -1,0 +1,2 @@
+# bing-image-creator
+AUTOMATION OF GENERATION OF IMAGE USING BING
