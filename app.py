@@ -5,6 +5,7 @@ from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from selenium.common.exceptions import TimeoutException
 import subprocess
 import os
 import time
@@ -78,10 +79,17 @@ def login_to_bing(driver, email, password):
         take_screenshot_in_memory(driver)
 
         logging.info("🔑 Using password login...")
-        WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//span[text()='Use your password']"))).click()
-        logging.info("🖱️ Clicked 'Use your password'.")
-        time.sleep(2)
-        take_screenshot_in_memory(driver)
+        try:
+            # Wait up to 15 seconds for the "Use your password" button
+            use_pwd_btn = WebDriverWait(driver, 15).until(
+                EC.element_to_be_clickable((By.XPATH, "//span[text()='Use your password']"))
+            )
+            use_pwd_btn.click()
+            logging.info("🖱️ Clicked 'Use your password'.")
+            time.sleep(2)
+            take_screenshot_in_memory(driver)
+        except TimeoutException:
+            logging.info("'Use your password' button not found after 15 seconds. Proceeding to password entry.")
 
         logging.info("🔒 Entering password...")
         driver.find_element(By.ID, "passwordEntry").send_keys(password)
@@ -92,15 +100,14 @@ def login_to_bing(driver, email, password):
         take_screenshot_in_memory(driver)
 
         logging.info("✅ Staying signed in...")
-        WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.CSS_SELECTOR, "button[data-testid='primaryButton']"))).click()
+        WebDriverWait(driver, 10).until(
+            EC.element_to_be_clickable((By.CSS_SELECTOR, "button[data-testid='primaryButton']"))
+        ).click()
         logging.info("🖱️ Clicked 'Stay signed in'.")
-        time.sleep(5)
-        take_screenshot_in_memory(driver)
 
-        logging.info("🎉 Logged in to Bing successfully.")
     except Exception as e:
         logging.error(f"❌ Login failed: {e}")
-        logging.error(traceback.format_exc())
+        take_screenshot_in_memory(driver)
         raise
 
 def generate_images(driver, prompt):
