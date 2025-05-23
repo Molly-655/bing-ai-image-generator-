@@ -117,29 +117,37 @@ def generate_images(driver, prompt):
     textarea.send_keys(prompt)
     logging.info("✅ Prompt typed.")
 
-    button=driver.find_element(By.ID, "create_btn_c")
+    button = driver.find_element(By.ID, "create_btn_c")
     driver.execute_script("arguments[0].click();", button)
     logging.info("🖱️ Clicked 'Create' button.")
-    time.sleep(15)
+
+    # Poll for images instead of fixed sleep
+    WebDriverWait(driver, 60).until(
+        EC.presence_of_element_located((By.CSS_SELECTOR, "img.image-row-img"))
+    )
     take_screenshot_in_memory(driver)
     logging.info("📸 Screenshot taken after image generation.")
 
     logging.info("🖼️ Extracting image blobs...")
     js_script = """
-    const imgs = Array.from(document.querySelectorAll('img.image-row-img'));
-    const promises = imgs.map(img => {
-        return fetch(img.src)
-            .then(res => res.blob())
-            .then(blob => new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.onloadend = () => resolve(reader.result);
-                reader.onerror = reject;
-                reader.readAsDataURL(blob);
-            }));
-    });
-    return Promise.all(promises);
+    const done = arguments[0];
+    (async () => {
+        const imgs = Array.from(document.querySelectorAll('img.image-row-img'));
+        const promises = imgs.map(img => {
+            return fetch(img.src)
+                .then(res => res.blob())
+                .then(blob => new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onloadend = () => resolve(reader.result);
+                    reader.onerror = reject;
+                    reader.readAsDataURL(blob);
+                }));
+        });
+        const results = await Promise.all(promises);
+        done(results);
+    })();
     """
-    return driver.execute_async_script(f"const done = arguments[0]; ({js_script}).then(done)")
+    return driver.execute_async_script(js_script)
 
 def save_base64_images(base64_list):
     saved = []
