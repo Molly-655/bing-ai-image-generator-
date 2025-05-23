@@ -117,7 +117,8 @@ def generate_images(driver, prompt):
     textarea.send_keys(prompt)
     logging.info("✅ Prompt typed.")
 
-    driver.find_element(By.ID, "create_btn_c").click()
+    button=driver.find_element(By.ID, "create_btn_c")
+    driver.execute_script("arguments[0].click();", button)
     logging.info("🖱️ Clicked 'Create' button.")
     time.sleep(15)
     take_screenshot_in_memory(driver)
