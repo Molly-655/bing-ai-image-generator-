@@ -109,7 +109,7 @@ def login_to_bing(driver, email, password):
         WebDriverWait(driver, 20).until(
            EC.presence_of_element_located((By.ID, "sb_form_q"))
         )
-        driver.save_screenshot("bing_image_creator_page.png")
+        take_screenshot_in_memory(driver)
     except Exception as e:
         logging.error(f"❌ Login failed: {e}")
         take_screenshot_in_memory(driver)
