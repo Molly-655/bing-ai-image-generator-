@@ -125,10 +125,11 @@ def generate_images(driver, prompt):
     button = driver.find_element(By.ID, "create_btn_c")
     driver.execute_script("arguments[0].click();", button)
     logging.info("🖱️ Clicked 'Create' button.")
+    take_screenshot_in_memory(driver)
 
     # Poll for images instead of fixed sleep
     WebDriverWait(driver, 60).until(
-        EC.presence_of_element_located((By.CSS_SELECTOR, "img.image-row-img"))
+        EC.presence_of_element_located((By.CSS_SELECTOR, "img.image-row-img.bceimg.mimg"))
     )
     take_screenshot_in_memory(driver)
     logging.info("📸 Screenshot taken after image generation.")
