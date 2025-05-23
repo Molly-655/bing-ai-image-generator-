@@ -13,9 +13,9 @@ import base64
 import uuid
 import traceback
 from dotenv import load_dotenv
+from io import BytesIO
 
 load_dotenv()
-
 
 # Setup logging
 logging.basicConfig(
@@ -26,9 +26,7 @@ logging.basicConfig(
 app = Flask(__name__)
 
 TEMP_IMAGE_DIR = "temp_images"
-SCREENSHOT_DIR = "screenshots"
 os.makedirs(TEMP_IMAGE_DIR, exist_ok=True)
-os.makedirs(SCREENSHOT_DIR, exist_ok=True)
 
 ADMIN_CODE = "ICU14CU"
 
@@ -56,48 +54,67 @@ def login_once(email, password):
         login_to_bing(driver, email, password)
         logged_in = True
 
-def take_screenshot(driver, name):
-    filepath = os.path.join(SCREENSHOT_DIR, f"{name}.png")
-    driver.save_screenshot(filepath)
-    logging.info(f"📸 Screenshot saved: {filepath}")
+def take_screenshot_in_memory(driver):
+    screenshot_png = driver.get_screenshot_as_png()
+    logging.info("📸 Screenshot captured in memory.")
+    return screenshot_png
 
 def login_to_bing(driver, email, password):
-    driver.get("https://www.bing.com/fd/auth/signin?action=interactive&provider=windows_live_id&return_url=https%3a%2f%2fwww.bing.com%2fimages%2fcreate%3fsude%3d1&cobrandid=03f1ec5e-1843-43e5-a2f6-e60ab27f6b91&noaadredir=1&FORM=GENUS1")
-    time.sleep(3)
-    take_screenshot(driver, "login_page_loaded")
-    time.sleep(3)
+    try:
+        logging.info("🔗 Navigating to Bing login page...")
+        driver.get("https://www.bing.com/fd/auth/signin?action=interactive&provider=windows_live_id&return_url=https%3a%2f%2fwww.bing.com%2fimages%2fcreate%3fsude%3d1&cobrandid=03f1ec5e-1843-43e5-a2f6-e60a6e0b1b9b")
+        time.sleep(3)
+        logging.info("✅ Login page loaded.")
+        take_screenshot_in_memory(driver)
+        time.sleep(3)
 
-    logging.info("📧 Entering email...")
-    WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.ID, "usernameEntry")))
-    driver.find_element(By.ID, "usernameEntry").send_keys(email)
-    driver.find_element(By.CSS_SELECTOR, "button[data-testid='primaryButton']").click()
-    time.sleep(3)
-    take_screenshot(driver, "email")
+        logging.info("📧 Entering email...")
+        WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.ID, "usernameEntry")))
+        driver.find_element(By.ID, "usernameEntry").send_keys(email)
+        logging.info("✅ Email entered.")
+        driver.find_element(By.CSS_SELECTOR, "button[data-testid='primaryButton']").click()
+        logging.info("🖱️ Clicked next after email.")
+        time.sleep(3)
+        take_screenshot_in_memory(driver)
 
-    logging.info("🔑 Using password login...")
-    WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//span[text()='Use your password']"))).click()
-    time.sleep(2)
-    take_screenshot(driver, "clip")
+        logging.info("🔑 Using password login...")
+        WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//span[text()='Use your password']"))).click()
+        logging.info("🖱️ Clicked 'Use your password'.")
+        time.sleep(2)
+        take_screenshot_in_memory(driver)
 
-    logging.info("🔒 Entering password...")
-    driver.find_element(By.ID, "passwordEntry").send_keys(password)
-    driver.find_element(By.CSS_SELECTOR, "button[data-testid='primaryButton']").click()
-    time.sleep(3)
-    take_screenshot(driver, "password")
+        logging.info("🔒 Entering password...")
+        driver.find_element(By.ID, "passwordEntry").send_keys(password)
+        logging.info("✅ Password entered.")
+        driver.find_element(By.CSS_SELECTOR, "button[data-testid='primaryButton']").click()
+        logging.info("🖱️ Clicked next after password.")
+        time.sleep(3)
+        take_screenshot_in_memory(driver)
 
-    logging.info("✅ Staying signed in...")
-    WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.CSS_SELECTOR, "button[data-testid='primaryButton']"))).click()
-    time.sleep(5)
-    take_screenshot(driver, "signed")
+        logging.info("✅ Staying signed in...")
+        WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.CSS_SELECTOR, "button[data-testid='primaryButton']"))).click()
+        logging.info("🖱️ Clicked 'Stay signed in'.")
+        time.sleep(5)
+        take_screenshot_in_memory(driver)
+
+        logging.info("🎉 Logged in to Bing successfully.")
+    except Exception as e:
+        logging.error(f"❌ Login failed: {e}")
+        logging.error(traceback.format_exc())
+        raise
 
 def generate_images(driver, prompt):
     logging.info("🖊️ Typing prompt...")
     textarea = driver.find_element(By.ID, "sb_form_q")
     textarea.clear()
     textarea.send_keys(prompt)
+    logging.info("✅ Prompt typed.")
+
     driver.find_element(By.ID, "create_btn_c").click()
+    logging.info("🖱️ Clicked 'Create' button.")
     time.sleep(15)
-    take_screenshot(driver, "create")
+    take_screenshot_in_memory(driver)
+    logging.info("📸 Screenshot taken after image generation.")
 
     logging.info("🖼️ Extracting image blobs...")
     js_script = """
@@ -128,42 +145,44 @@ def save_base64_images(base64_list):
         with open(path, "wb") as f:
             f.write(img_data)
         saved.append({"url": f"/serve-image/{file_id}"})
+        logging.info(f"✅ Image saved: {path}")
     return saved
 
 @app.route("/api/gen", methods=["POST"])
 def generate():
     prompt = request.args.get("prompt")
-
     if not prompt:
         return jsonify({"error": "Missing prompt."}), 400
-
     try:
         base64_images = generate_images(driver, prompt)
         saved = save_base64_images(base64_images)
+        logging.info(f"✅ Generated and saved {len(saved)} images for prompt: {prompt}")
         return jsonify(saved)
     except Exception as e:
         logging.error(traceback.format_exc())
         return jsonify({"error": str(e)})
 
-@app.route("/screenshots")
-def list_screenshots():
-    files = [f for f in os.listdir(SCREENSHOT_DIR) if f.endswith(".png")]
-    links = [f'<li><a href="/screenshots/{f}" target="_blank">{f}</a></li>' for f in files]
-    html = f"<h2>📸 Available Screenshots</h2><ul>{''.join(links)}</ul>"
-    return html
-
-@app.route("/screenshots/<filename>")
-def serve_screenshot(filename):
-    path = os.path.join(SCREENSHOT_DIR, filename)
-    if not os.path.exists(path):
-        return jsonify({"error": "Screenshot not found"}), 404
-    return send_file(path, mimetype="image/png")
+@app.route("/api/screenshot")
+def serve_screenshot_api():
+    try:
+        screenshot_png = take_screenshot_in_memory(driver)
+        logging.info("✅ Screenshot served as PNG.")
+        return send_file(
+            BytesIO(screenshot_png),
+            mimetype="image/png",
+            as_attachment=False,
+            download_name="screenshot.png"
+        )
+    except Exception as e:
+        logging.error(traceback.format_exc())
+        return jsonify({"error": str(e)}), 500
 
 @app.route("/serve-image/<image_id>")
 def serve_image(image_id):
     path = os.path.join(TEMP_IMAGE_DIR, f"{image_id}.png")
     if not os.path.exists(path):
         return jsonify({"error": "Image not found"}), 404
+    logging.info(f"✅ Serving image: {path}")
     return send_file(path, mimetype="image/png")
 
 @app.route('/restart')
@@ -175,8 +194,10 @@ def restart_browser():
     try:
         driver.quit()
         driver = webdriver.Chrome(service=service, options=options)
+        logging.info("✅ Browser session restarted.")
         return jsonify({"status": "success", "message": "Browser session restarted."})
     except Exception as e:
+        logging.error(traceback.format_exc())
         return jsonify({"status": "error", "message": str(e)}), 500
 
 def get_binary_version(binary_path):
