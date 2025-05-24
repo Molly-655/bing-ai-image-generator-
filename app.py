@@ -274,6 +274,18 @@ def get_key():
     key = random.choice(API_KEYS)
     return jsonify({"api_key": key})
 
+@app.errorhandler(404)
+def page_not_found(e):
+    return render_template("error.html", error_message="Resource not found."), 404
+
+@app.errorhandler(405)
+def method_not_allowed(e):
+    return render_template("error.html", error_message="Method not allowed."), 405
+
+@app.errorhandler(Exception)
+def handle_exception(e):
+    return render_template("error.html", error_message="An unexpected error occurred."), 500
+
 def get_binary_version(binary_path):
     try:
         result = subprocess.run([binary_path, "--version"], capture_output=True, text=True, check=True)
