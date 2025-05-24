@@ -9,7 +9,7 @@ Easily integrate Bing's creativity into your own apps, bots, or workflows!
 ---
 
 <p align="center">
-  <img src="https://user-images.githubusercontent.com/3369400/273451341-7ad1f4b3-efc1-4c6d-b0c6-6b8e0a2f8eb8.png" width="500" alt="Bing Image Creator Demo"/>
+  <img src="https://i.ytimg.com/vi/98SeLOir-RA/mqdefault.jpg" width="500" alt="Bing Image Creator Demo"/>
 </p>
 
 ---
