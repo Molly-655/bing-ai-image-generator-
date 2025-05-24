@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>INTO THE UNKNOWN.....</title>
+    <style>
+        body { font-family: 'Segoe UI', Arial, sans-serif; background: #f5f7fa; padding: 40px; }
+        .container { background: #fff; max-width: 440px; margin: auto; border-radius: 16px; box-shadow: 0 3px 12px #0001; padding: 32px; }
+        h1 { color: #355fa3; }
+        #api-key { font-weight: bold; color: #34774f; }
+        button { background: #355fa3; color: #fff; border: none; border-radius: 6px; padding: 10px 26px; margin-top: 12px; font-size: 1.1em; cursor: pointer; transition: 0.2s; }
+        button:hover { background: #18335d; }
+        .footer { margin-top: 32px; color: #888; font-size: 0.93em; text-align: center; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Welcome to the Bing Image Creator API</h1>
+        <p>Get your free API key to generate images programmatically.</p>
+        <button onclick="getKey()">Get Key</button>
+        <p id="api-key-box" style="display:none;">
+            Your API Key: <span id="api-key"></span>
+        </p>
+        <hr>
+        <h3>Usage Example:</h3>
+        <pre>
+POST /api/gen
+{
+  "api_key": "YOUR_API_KEY",
+  "prompt": "a cat riding a bicycle"
+}
+        </pre>
+        <div class="footer">by <b>Sman12345678</b></div>
+    </div>
+    <script>
+        function getKey() {
+            fetch('/api/getkey')
+                .then(res => res.json())
+                .then(data => {
+                    document.getElementById('api-key').textContent = data.api_key;
+                    document.getElementById('api-key-box').style.display = 'block';
+                });
+        }
+    </script>
+</body>
+</html>
