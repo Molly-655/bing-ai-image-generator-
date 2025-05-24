@@ -202,7 +202,7 @@ If you found this project useful or cool, please ⭐️ star the repo and share 
 ---
 
 <p align="center">
-  <img src="https://user-images.githubusercontent.com/3369400/273451315-6d3c2c37-1a7a-4f4a-8906-57be6e4c0c8d.png" width="300" alt="Bing Image Creator Icon"/>
+  <img src="https://grupoioe.es/wp-content/uploads/2025/03/bing_image_creator.webp" width="300" alt="Bing Image Creator Icon"/>
 </p>
 
 ---
