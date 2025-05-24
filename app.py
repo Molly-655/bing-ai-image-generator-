@@ -29,6 +29,19 @@ app = Flask(__name__)
 TEMP_IMAGE_DIR = "temp_images"
 os.makedirs(TEMP_IMAGE_DIR, exist_ok=True)
 
+API_KEYS = [
+    "sman-apiA1B2C3D4E5",
+    "sman-apiF6G7H8I9J0",
+    "sman-apiK1L2M3N4O5",
+    "sman-apiP6Q7R8S9T0",
+    "sman-apiU1V2W3X4Y5",
+    "sman-apiZ6A7B8C9D0",
+    "sman-apiE1F2G3H4I5",
+    "sman-apiJ6K7L8M9N0",
+    "sman-apiO1P2Q3R4S5",
+    "sman-apiT6U7V8W9X0"
+]
+
 ADMIN_CODE = "ICU14CU"
 
 chrome_bin = os.environ.get("CHROME_BIN", "/usr/bin/chromium")
@@ -172,9 +185,22 @@ def save_base64_images(base64_list):
 
 @app.route("/api/gen", methods=["POST"])
 def generate():
-    prompt = request.args.get("prompt")
+    # Try to get api_key from args or JSON
+    api_key = (
+        request.args.get("api_key")
+        or (request.json.get("api_key") if request.is_json and request.json else None)
+    )
+    if not api_key or api_key not in API_KEYS:
+        return jsonify({"error": "Invalid or missing API key."}), 401
+
+    # Try to get prompt from args or JSON
+    prompt = (
+        request.args.get("prompt")
+        or (request.json.get("prompt") if request.is_json and request.json else None)
+    )
     if not prompt:
         return jsonify({"error": "Missing prompt."}), 400
+
     try:
         base64_images = generate_images(driver, prompt)
         saved = save_base64_images(base64_images)
@@ -207,20 +233,46 @@ def serve_image(image_id):
     logging.info(f"✅ Serving image: {path}")
     return send_file(path, mimetype="image/png")
 
-@app.route('/restart')
-def restart_browser():
+@app.route('/refresh', methods=['POST'])
+def refresh_browser_only():
+    """
+    Refresh (restart) the browser instance, WITHOUT re-login.
+    """
     global driver
-    code = request.args.get("code")
-    if code != ADMIN_CODE:
-        return jsonify({"status": "error", "message": "Unauthorized"}), 401
     try:
         driver.quit()
         driver = webdriver.Chrome(service=service, options=options)
-        logging.info("✅ Browser session restarted.")
-        return jsonify({"status": "success", "message": "Browser session restarted."})
+        logging.info("✅ Browser has been refreshed (no relogin).")
+        return jsonify({"status": "success", "message": "Browser refreshed (no relogin)."}), 200
     except Exception as e:
         logging.error(traceback.format_exc())
         return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route('/restart', methods=['POST'])
+def restart_browser_and_relogin():
+    """
+    Restart the browser instance AND perform re-login.
+    """
+    global driver, email, password, logged_in
+    try:
+        driver.quit()
+        driver = webdriver.Chrome(service=service, options=options)
+        login_to_bing(driver, email, password)
+        logged_in = True
+        logging.info("✅ Browser has been restarted and re-logged in.")
+        return jsonify({"status": "success", "message": "Browser restarted and re-logged in."}), 200
+    except Exception as e:
+        logging.error(traceback.format_exc())
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route("/")
+def home():
+    return render_template("index.html")
+
+@app.route("/api/getkey")
+def get_key():
+    key = random.choice(API_KEYS)
+    return jsonify({"api_key": key})
 
 def get_binary_version(binary_path):
     try:
