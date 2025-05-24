@@ -147,6 +147,9 @@ def generate_images(driver, prompt):
     )
     take_screenshot_in_memory(driver)
     logging.info("📸 Screenshot taken after image generation.")
+    textarea = driver.find_element(By.ID, "sb_form_q")
+    textarea.clear()
+    logging.info("✅ Prompt cleared after image generation.")
 
     logging.info("🖼️ Extracting image blobs...")
     js_script = """
