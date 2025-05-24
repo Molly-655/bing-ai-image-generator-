@@ -11,6 +11,8 @@
         button { background: #355fa3; color: #fff; border: none; border-radius: 6px; padding: 10px 26px; margin-top: 12px; font-size: 1.1em; cursor: pointer; transition: 0.2s; }
         button:hover { background: #18335d; }
         .footer { margin-top: 32px; color: #888; font-size: 0.93em; text-align: center; }
+        .copy-btn { background: #ffd600; color: #232323; margin-left: 8px; font-size: 1em; padding: 8px 16px; border-radius: 5px; border: none; cursor: pointer; }
+        .copy-btn:hover { background: #ffe066; }
     </style>
 </head>
 <body>
@@ -19,7 +21,9 @@
         <p>Get your free API key to generate images programmatically.</p>
         <button onclick="getKey()">Get Key</button>
         <p id="api-key-box" style="display:none;">
-            Your API Key: <span id="api-key"></span>
+            Your API Key: 
+            <span id="api-key"></span>
+            <button class="copy-btn" id="copy-btn" onclick="copyKey()" style="display:none;">Copy</button>
         </p>
         <hr>
         <h3>Usage Example:</h3>
@@ -39,7 +43,26 @@ POST /api/gen
                 .then(data => {
                     document.getElementById('api-key').textContent = data.api_key;
                     document.getElementById('api-key-box').style.display = 'block';
+                    document.getElementById('copy-btn').style.display = 'inline-block';
                 });
+        }
+        function copyKey() {
+            const key = document.getElementById('api-key').textContent;
+            if (navigator.clipboard) {
+                navigator.clipboard.writeText(key).then(function() {
+                    let btn = document.getElementById('copy-btn');
+                    btn.textContent = "Copied!";
+                    setTimeout(() => { btn.textContent = "Copy"; }, 1500);
+                });
+            } else {
+                // fallback for unsupported browsers
+                let textarea = document.createElement('textarea');
+                textarea.value = key;
+                document.body.appendChild(textarea);
+                textarea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textarea);
+            }
         }
     </script>
 </body>
