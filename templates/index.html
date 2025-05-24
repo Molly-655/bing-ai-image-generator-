@@ -5,7 +5,7 @@
     <title>INTO THE UNKNOWN.....</title>
     <style>
         body { font-family: 'Segoe UI', Arial, sans-serif; background: #f5f7fa; padding: 40px; }
-        .container { background: #fff; max-width: 440px; margin: auto; border-radius: 16px; box-shadow: 0 3px 12px #0001; padding: 32px; }
+        .container { background: #fff; max-width: 540px; margin: auto; border-radius: 16px; box-shadow: 0 3px 12px #0001; padding: 32px; }
         h1 { color: #355fa3; }
         #api-key { font-weight: bold; color: #34774f; }
         button { background: #355fa3; color: #fff; border: none; border-radius: 6px; padding: 10px 26px; margin-top: 12px; font-size: 1.1em; cursor: pointer; transition: 0.2s; }
@@ -13,6 +13,11 @@
         .footer { margin-top: 32px; color: #888; font-size: 0.93em; text-align: center; }
         .copy-btn { background: #ffd600; color: #232323; margin-left: 8px; font-size: 1em; padding: 8px 16px; border-radius: 5px; border: none; cursor: pointer; }
         .copy-btn:hover { background: #ffe066; }
+        .example-block { background: #fafbfc; border-radius: 7px; border: 1px solid #e2e8f0; margin: 18px 0 10px 0; padding: 18px; }
+        .codeblock { background: #252e3e; color: #d3e0f7; padding: 11px 12px; border-radius: 6px; overflow-x: auto; font-size: 0.97em; }
+        .img-preview { margin-top: 14px; }
+        .img-preview img { max-width: 120px; max-height: 120px; margin: 6px; border-radius: 7px; box-shadow: 0 0 8px #aaa2; }
+        .lang-label { font-size: 0.94em; color: #355fa3; font-weight: bold; margin-top: 12px; }
     </style>
 </head>
 <body>
@@ -26,14 +31,77 @@
             <button class="copy-btn" id="copy-btn" onclick="copyKey()" style="display:none;">Copy</button>
         </p>
         <hr>
-        <h3>Usage Example:</h3>
-        <pre>
-POST /api/gen
+        <h3>Usage Example: Generate and Retrieve Images</h3>
+        <div class="example-block">
+            <div class="lang-label">cURL</div>
+            <pre class="codeblock">curl -X POST https://bing-image-creator-0255.onrender.com/api/gen \
+  -H "Content-Type: application/json" \
+  -d '{"api_key": "YOUR_API_KEY", "prompt": "a cat riding a bicycle"}'
+            </pre>
+            <div class="lang-label">Python (requests)</div>
+            <pre class="codeblock">import requests
+
+resp = requests.post(
+    "https://bing-image-creator-0255.onrender.com/api/gen",
+    json={"api_key": "YOUR_API_KEY", "prompt": "a cat riding a bicycle"}
+)
+print(resp.json())  # List of image info
+
+# Get and save all images
+for obj in resp.json():
+    image_id = obj['url'].split('/')[-1]
+    img_url = f"https://bing-image-creator-0255.onrender.com/serve-image/{image_id}"
+    img = requests.get(img_url)
+    with open(f"{image_id}.png", "wb") as f:
+        f.write(img.content)
+            </pre>
+            <div class="lang-label">JavaScript (browser console)</div>
+            <pre class="codeblock">fetch('https://bing-image-creator-0255.onrender.com/api/gen', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+        api_key: "YOUR_API_KEY",
+        prompt: "a cat riding a bicycle"
+    })
+})
+.then(res => res.json())
+.then(data => {
+    data.forEach(obj => {
+        const imageId = obj.url.split('/').pop();
+        const imgUrl = `https://bing-image-creator-0255.onrender.com/serve-image/${imageId}`;
+        console.log("Image URL:", imgUrl);
+        // Optional: Display on page
+        const img = document.createElement('img');
+        img.src = imgUrl;
+        img.style = "max-width:120px;max-height:120px;margin:5px;";
+        document.body.appendChild(img);
+    });
+});
+            </pre>
+            <div class="lang-label">Postman (raw body, JSON)</div>
+            <pre class="codeblock">POST https://bing-image-creator-0255.onrender.com/api/gen
+Content-Type: application/json
+
 {
   "api_key": "YOUR_API_KEY",
   "prompt": "a cat riding a bicycle"
 }
-        </pre>
+            </pre>
+            <div style="margin-top:12px;">
+                <b>Response Example:</b>
+                <pre class="codeblock">[
+  {"url": "/serve-image/12345678-90ab-cdef-1234-567890abcdef"},
+  {"url": "/serve-image/abcdef12-3456-7890-abcd-ef1234567890"}
+]</pre>
+                <b>Get Main Image URL:</b><br>
+                Use <code>/serve-image/&lt;image_id&gt;</code> from the response:<br>
+                <code>https://bing-image-creator-0255.onrender.com/serve-image/12345678-90ab-cdef-1234-567890abcdef</code>
+                <div class="img-preview">
+                    <img src="https://bing-image-creator-0255.onrender.com/serve-image/12345678-90ab-cdef-1234-567890abcdef" alt="img1" onerror="this.style.display='none'">
+                    <img src="https://bing-image-creator-0255.onrender.com/serve-image/abcdef12-3456-7890-abcd-ef1234567890" alt="img2" onerror="this.style.display='none'">
+                </div>
+            </div>
+        </div>
         <div class="footer">MADE BY <b><a href="https://web.facebook.com/people/Kolawole-Suleiman/61553565805276/">SULEIMAN</a></b></div>
     </div>
     <script>
