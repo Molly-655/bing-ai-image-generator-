@@ -147,6 +147,7 @@ def generate_images(driver, prompt):
         logging.info("⏳ Waiting for images to generate...")
         WebDriverWait(driver, 60).until(
             EC.presence_of_element_located((By.CSS_SELECTOR, "img.image-row-img"))
+        )
         logging.info("🎉 Images generated successfully!")
 
         # 💾 Extract images 
