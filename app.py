@@ -131,64 +131,74 @@ def login_to_bing(driver, email, password):
         
 def generate_images(driver, prompt):
     try:
-        # 🖊️ Typing prompt (with emoji logs)
+        # 🔄 Ensure we're on the correct page
+        if "bing.com/images/create" not in driver.current_url:
+            logging.warning("⚠️ Wrong page! Redirecting to Bing Create...")
+            driver.get("https://www.bing.com/images/create")
+            WebDriverWait(driver, 20).until(
+                EC.presence_of_element_located((By.ID, "sb_form_q"))
+            )
+
+        # 🖊️ Type prompt
         logging.info("🖊️ Typing prompt...")
         textarea = driver.find_element(By.ID, "sb_form_q")
         textarea.clear()
         textarea.send_keys(prompt)
         logging.info("✅ Prompt typed!")
 
-        # 🖱️ Click create button
-        logging.info("🖱️ Clicking 'Create' button...")
-        driver.find_element(By.ID, "create_btn_c").click()
-        take_screenshot_in_memory(driver)  # 📸
+        # 🖱️ CLICK FIX: Scroll button into view and use JavaScript click
+        logging.info("🖱️ Preparing to click 'Create'...")
+        create_button = driver.find_element(By.ID, "create_btn_c")
+        driver.execute_script("arguments[0].scrollIntoView(true);", create_button)  # Scroll to button
+        time.sleep(1)  # Let scrolling complete
+        driver.execute_script("arguments[0].click();", create_button)  # JS click bypasses overlay
+        logging.info("🎯 Create button clicked!")
+        take_screenshot_in_memory(driver)
 
-        # ⏳ Wait for generation
-        logging.info("⏳ Waiting for images to generate...")
-        WebDriverWait(driver, 60).until(
-            EC.presence_of_element_located((By.CSS_SELECTOR, "img.image-row-img"))
-        )
-        logging.info("🎉 Images generated successfully!")
+        # ⏳ Wait for generation with timeout
+        logging.info("⏳ Waiting for images...")
+        try:
+            WebDriverWait(driver, 60).until(
+                EC.presence_of_element_located((By.CSS_SELECTOR, "img.image-row-img"))
+            )
+            logging.info("🎉 Images generated!")
+        except TimeoutException:
+            logging.error("⌛ Timeout! Refreshing page...")
+            driver.get("https://www.bing.com/images/create")
+            raise RuntimeError("Image generation timed out")
 
-        # 💾 Extract images 
-        logging.info("💾 Extracting image data...")
+        # 💾 Extract images
+        logging.info("💾 Extracting images...")
         base64_images = driver.execute_async_script("""
             const done = arguments[0];
-            (async () => {
-                const imgs = Array.from(document.querySelectorAll('img.image-row-img'));
-                const results = await Promise.all(imgs.map(img => {
-                    return fetch(img.src)
-                        .then(res => res.blob())
-                        .then(blob => new Promise((resolve) => {
-                            const reader = new FileReader();
-                            reader.onloadend = () => resolve(reader.result);
-                            reader.readAsDataURL(blob);
-                        }));
-                });
-                done(results);
-            })();
+            const imgs = Array.from(document.querySelectorAll('img.image-row-img'));
+            if (imgs.length === 0) return done({error: "No images found"});
+            
+            Promise.all(imgs.map(img => {
+                return fetch(img.src)
+                    .then(res => res.blob())
+                    .then(blob => new Promise(resolve => {
+                        const reader = new FileReader();
+                        reader.onloadend = () => resolve(reader.result);
+                        reader.readAsDataURL(blob);
+                    }));
+            })).then(done);
         """)
 
-        # 🧹 CRITICAL: Clear prompt box or reload
-        try:
-            logging.info("🧹 Attempting to clear prompt box...")
-            driver.find_element(By.ID, "sb_form_q").clear()
-            logging.info("✅ Prompt box cleared! Ready for next request.")
-        except Exception as e:
-            logging.warning(f"⚠️ Failed to clear prompt box: {str(e)}")
-            logging.info("🔄 Reloading page as fallback...")
-            driver.get("https://www.bing.com/images/create")
-            WebDriverWait(driver, 20).until(
-                EC.presence_of_element_located((By.ID, "sb_form_q")))
-            logging.info("♻️ Page reloaded! Fresh session ready.")
+        if isinstance(base64_images, dict) and 'error' in base64_images:
+            raise RuntimeError(base64_images['error'])
+
+        # 🧹 Cleanup
+        logging.info("🧹 Clearing prompt...")
+        driver.find_element(By.ID, "sb_form_q").clear()
+        logging.info("✨ Ready for next request!")
 
         return base64_images
 
     except Exception as e:
-        logging.error(f"❌ CRITICAL ERROR: {str(e)}")
-        take_screenshot_in_memory(driver)  # 📸 Debug
+        logging.error(f"💥 ERROR: {str(e)}")
+        take_screenshot_in_memory(driver)
         raise
-
 def save_base64_images(base64_list):
     saved = []
     for data_url in base64_list:
