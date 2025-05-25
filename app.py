@@ -130,47 +130,63 @@ def login_to_bing(driver, email, password):
         raise
         
 def generate_images(driver, prompt):
-    logging.info("🖊️ Typing prompt...")
-    textarea = driver.find_element(By.ID, "sb_form_q")
-    textarea.clear()
-    textarea.send_keys(prompt)
-    logging.info("✅ Prompt typed.")
+    try:
+        # 🖊️ Typing prompt (with emoji logs)
+        logging.info("🖊️ Typing prompt...")
+        textarea = driver.find_element(By.ID, "sb_form_q")
+        textarea.clear()
+        textarea.send_keys(prompt)
+        logging.info("✅ Prompt typed!")
 
-    button = driver.find_element(By.ID, "create_btn_c")
-    driver.execute_script("arguments[0].click();", button)
-    logging.info("🖱️ Clicked 'Create' button.")
-    take_screenshot_in_memory(driver)
+        # 🖱️ Click create button
+        logging.info("🖱️ Clicking 'Create' button...")
+        driver.find_element(By.ID, "create_btn_c").click()
+        take_screenshot_in_memory(driver)  # 📸
 
-    # Poll for images instead of fixed sleep
-    WebDriverWait(driver, 60).until(
-        EC.presence_of_element_located((By.CSS_SELECTOR, "img.image-row-img.bceimg.mimg"))
-    )
-    take_screenshot_in_memory(driver)
-    logging.info("📸 Screenshot taken after image generation.")
-    textarea = driver.find_element(By.ID, "sb_form_q")
-    textarea.clear()
-    logging.info("✅ Prompt cleared after image generation.")
+        # ⏳ Wait for generation
+        logging.info("⏳ Waiting for images to generate...")
+        WebDriverWait(driver, 60).until(
+            EC.presence_of_element_located((By.CSS_SELECTOR, "img.image-row-img"))
+        logging.info("🎉 Images generated successfully!")
 
-    logging.info("🖼️ Extracting image blobs...")
-    js_script = """
-    const done = arguments[0];
-    (async () => {
-        const imgs = Array.from(document.querySelectorAll('img.image-row-img'));
-        const promises = imgs.map(img => {
-            return fetch(img.src)
-                .then(res => res.blob())
-                .then(blob => new Promise((resolve, reject) => {
-                    const reader = new FileReader();
-                    reader.onloadend = () => resolve(reader.result);
-                    reader.onerror = reject;
-                    reader.readAsDataURL(blob);
-                }));
-        });
-        const results = await Promise.all(promises);
-        done(results);
-    })();
-    """
-    return driver.execute_async_script(js_script)
+        # 💾 Extract images 
+        logging.info("💾 Extracting image data...")
+        base64_images = driver.execute_async_script("""
+            const done = arguments[0];
+            (async () => {
+                const imgs = Array.from(document.querySelectorAll('img.image-row-img'));
+                const results = await Promise.all(imgs.map(img => {
+                    return fetch(img.src)
+                        .then(res => res.blob())
+                        .then(blob => new Promise((resolve) => {
+                            const reader = new FileReader();
+                            reader.onloadend = () => resolve(reader.result);
+                            reader.readAsDataURL(blob);
+                        }));
+                });
+                done(results);
+            })();
+        """)
+
+        # 🧹 CRITICAL: Clear prompt box or reload
+        try:
+            logging.info("🧹 Attempting to clear prompt box...")
+            driver.find_element(By.ID, "sb_form_q").clear()
+            logging.info("✅ Prompt box cleared! Ready for next request.")
+        except Exception as e:
+            logging.warning(f"⚠️ Failed to clear prompt box: {str(e)}")
+            logging.info("🔄 Reloading page as fallback...")
+            driver.get("https://www.bing.com/images/create")
+            WebDriverWait(driver, 20).until(
+                EC.presence_of_element_located((By.ID, "sb_form_q")))
+            logging.info("♻️ Page reloaded! Fresh session ready.")
+
+        return base64_images
+
+    except Exception as e:
+        logging.error(f"❌ CRITICAL ERROR: {str(e)}")
+        take_screenshot_in_memory(driver)  # 📸 Debug
+        raise
 
 def save_base64_images(base64_list):
     saved = []
