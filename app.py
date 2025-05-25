@@ -214,32 +214,52 @@ def save_base64_images(base64_list):
         logging.info(f"✅ Image saved: {path}")
     return saved
 
+from threading import Lock
+
+generation_lock = Lock()
+
 @app.route("/api/gen", methods=["POST"])
 def generate():
-    # Try to get api_key from args or JSON
-    api_key = (
-        request.args.get("api_key")
-        or (request.json.get("api_key") if request.is_json and request.json else None)
-    )
-    if not api_key or api_key not in API_KEYS:
-        return jsonify({"error": "Invalid or missing API key."}), 401
-
-    # Try to get prompt from args or JSON
-    prompt = (
-        request.args.get("prompt")
-        or (request.json.get("prompt") if request.is_json and request.json else None)
-    )
-    if not prompt:
-        return jsonify({"error": "Missing prompt."}), 400
+    # Acquire the lock (non-blocking)
+    if not generation_lock.acquire(blocking=False):
+        return jsonify({"error": "Another image generation is in progress. Please wait."}), 429
 
     try:
+        # Get API key
+        api_key = (
+            request.args.get("api_key")
+            or (request.json.get("api_key") if request.is_json and request.json else None)
+        )
+        if not api_key or api_key not in API_KEYS:
+            return jsonify({"error": "Invalid or missing API key."}), 401
+
+        # Get prompt
+        prompt = (
+            request.args.get("prompt")
+            or (request.json.get("prompt") if request.is_json and request.json else None)
+        )
+        if not prompt:
+            return jsonify({"error": "Missing prompt."}), 400
+
+        # Generate images
         base64_images = generate_images(driver, prompt)
+
+        # Limit to 4 unique images
+        base64_images = list(dict.fromkeys(base64_images))[:4]
+
+        # Save images to disk
         saved = save_base64_images(base64_images)
+
         logging.info(f"✅ Generated and saved {len(saved)} images for prompt: {prompt}")
         return jsonify(saved)
+
     except Exception as e:
         logging.error(traceback.format_exc())
-        return jsonify({"error": str(e)})
+        return jsonify({"error": str(e)}), 500
+
+    finally:
+        generation_lock.release()
+
 
 @app.route("/api/screenshot")
 def serve_screenshot_api():
