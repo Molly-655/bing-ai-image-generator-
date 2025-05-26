@@ -218,26 +218,24 @@ from threading import Lock
 
 generation_lock = Lock()
 
-@app.route("/api/gen", methods=["POST"])
+@app.route("/api/gen", methods=["GET", "POST"])
 def generate():
     # Acquire the lock (non-blocking)
     if not generation_lock.acquire(blocking=False):
         return jsonify({"error": "Another image generation is in progress. Please wait."}), 429
 
     try:
+        # Choose the source: args for GET, json for POST
+        is_json = request.is_json and request.method == "POST"
+        source = request.args if request.method == "GET" else (request.get_json() or {})
+
         # Get API key
-        api_key = (
-            request.args.get("api_key")
-            or (request.json.get("api_key") if request.is_json and request.json else None)
-        )
+        api_key = source.get("api_key")
         if not api_key or api_key not in API_KEYS:
             return jsonify({"error": "Invalid or missing API key."}), 401
 
         # Get prompt
-        prompt = (
-            request.args.get("prompt")
-            or (request.json.get("prompt") if request.is_json and request.json else None)
-        )
+        prompt = source.get("prompt")
         if not prompt:
             return jsonify({"error": "Missing prompt."}), 400
 
